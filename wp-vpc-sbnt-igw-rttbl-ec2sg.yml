@@ -9,7 +9,7 @@ Parameters:
     AllowedValues: ["dev", "stg", "prd"]
   ResourceName:
     Type: String
-    Default: "wordpress-project"
+    Default: "WpProject"
 
   VpcCidr:
     Description: The CIDR block for the vpc
@@ -33,7 +33,10 @@ Parameters:
     Default: 10.0.3.0/24
 
 Resources:
-  MyVPC:
+  # ------------------------------ #
+  # VPC
+  # ------------------------------ #
+  Vpc:
     Type: 'AWS::EC2::VPC'
     Properties:
       CidrBlock: !Ref VpcCidr
@@ -41,85 +44,114 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: !Join ['-', [!Ref Env, !Ref ResourceName, 'vpc']]
-
-  InternetGateway:
+          Value: !Join ['-', [!Ref 'Env', !Ref 'ResourceName', 'vpc']]
+  # ------------------------------ #
+  # InternetGateway
+  # ------------------------------ #
+  Igw:
     Type: 'AWS::EC2::InternetGateway'
     Properties:
       Tags:
         - Key: Name
-          Value: !Join ['-', [!Ref Env, !Ref ResourceName, 'igw']]
-
+          Value: !Join ['-', [!Ref 'Env', !Ref 'ResourceName', 'igw']]
   AttachGateway:
     Type: 'AWS::EC2::VPCGatewayAttachment'
     Properties:
-      VpcId: !Ref MyVPC
-      InternetGatewayId: !Ref InternetGateway
-
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref Igw
+  # ------------------------------ #
+  # Subnet
+  # ------------------------------ #
   PublicSubnet1a:
     Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref Vpc
       CidrBlock: !Ref PublicSubnet1aCidr
       AvailabilityZone: ap-northeast-1a
       Tags:
         - Key: Name
-          Value: !Join ['-', [!Ref Env, !Ref ResourceName, 'pblcsbnt1a']]
-
+          Value: !Join ['-', [!Ref 'Env', !Ref 'ResourceName', 'pblcsbnt1a']]
   PublicSubnet1c:
     Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref Vpc
       CidrBlock: !Ref PublicSubnet1cCidr
       AvailabilityZone: ap-northeast-1c
       Tags:
         - Key: Name
-          Value: !Join ['-', [!Ref Env, !Ref ResourceName, 'pblcsbnt1c']]
-
+          Value: !Join ['-', [!Ref 'Env', !Ref 'ResourceName', 'pblcsbnt1c']]
   PrivateSubnet1a:
     Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref Vpc
       CidrBlock: !Ref PrivateSubnet1aCidr
       AvailabilityZone: ap-northeast-1a
       Tags:
         - Key: Name
-          Value: !Join ['-', [!Ref Env, !Ref ResourceName, 'prvtsbnt1a']]
-
+          Value: !Join ['-', [!Ref 'Env', !Ref 'ResourceName', 'prvtsbnt1a']]
   PrivateSubnet1c:
     Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref Vpc
       CidrBlock: !Ref PrivateSubnet1cCidr
       AvailabilityZone: ap-northeast-1c
       Tags:
         - Key: Name
-          Value: !Join ['-', [!Ref Env, !Ref ResourceName, 'prvtsbnt1c']]
-
+          Value: !Join ['-', [!Ref 'Env', !Ref 'ResourceName', 'prvtsbnt1c']]
   PublicRouteTable:
     Type: 'AWS::EC2::RouteTable'
     Properties:
-      VpcId: !Ref MyVPC
+      VpcId: !Ref Vpc
       Tags:
         - Key: Name
-          Value: !Join ['-', [!Ref Env, !Ref ResourceName, 'pblcrttbl']]
-
+          Value: !Join ['-', [!Ref 'Env', !Ref 'ResourceName', 'pblcrttbl']]
   PublicRoute:
     Type: 'AWS::EC2::Route'
     DependsOn: AttachGateway
     Properties:
       RouteTableId: !Ref PublicRouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-
+      GatewayId: !Ref Igw
+  # ------------------------------ #
+  # RouteTableAssociation
+  # ------------------------------ #
   SubnetRouteTableAssociation1a:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       SubnetId: !Ref PublicSubnet1a
       RouteTableId: !Ref PublicRouteTable
-
   SubnetRouteTableAssociation1c:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       SubnetId: !Ref PublicSubnet1c
       RouteTableId: !Ref PublicRouteTable
+
+Outputs:
+  Vpc:
+    Value: !Ref 'Vpc'
+    Export:
+      Name: !Sub 'WpVpc'
+  Igw:
+    Value: !Ref 'Igw'
+    Export:
+      Name: !Sub 'WpIgw'
+  PublicSubnet1a:
+    Value: !Ref 'PublicSubnet1a'
+    Export:
+      Name: !Sub 'WpPublicSubnet1a'
+  PublicSubnet1c:
+    Value: !Ref 'PublicSubnet1c'
+    Export:
+      Name: !Sub 'WpPublicSubnet1c'
+  PrivateSubnet1a:
+    Value: !Ref 'PrivateSubnet1a'
+    Export:
+      Name: !Sub 'WpPrivateSubnet1a'
+  PrivateSubnet1c:
+    Value: !Ref 'PrivateSubnet1c'
+    Export:
+      Name: !Sub 'WpPrivateSubnet1c'
+  PublicRouteTable:
+    Value: !Ref 'PublicRouteTable'
+    Export:
+      Name: !Sub 'WpPublicRouteTable'

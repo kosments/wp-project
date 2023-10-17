@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  "wp-alb-tg-listener-albsg-ec2sg"
+
+Parameters:
+  Env:
+    Type: String
+    Default: "dev"
+    AllowedValues: ["dev", "stg", "prd"]
+  ResourceName:
+    Type: String
+    Default: "WpProject"
+
+Resources:
+  # ------------------------------ #
+  # Alb SecurityGroup
+  # ------------------------------ #
+  AlbSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: !Join ['-', [!Ref 'Env', !Ref 'ResourceName', 'sg-for-alb']]
+      GroupDescription: Security group for ALB
+      VpcId: !ImportValue WpVpc
+      SecurityGroupIngress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+          Description: Allow all traffic
+      Tags:
+        - Key: Name
+          Value: !Join ['-', [!Ref Env, !Ref ResourceName, 'sg-for-alb']]
+  # ------------------------------ #
+  # ApplicationLoadBalancer
+  # ------------------------------ #
+  ApplicationLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Name: !Join ['-', [!Ref Env, !Ref ResourceName, 'alb']]
+      Subnets:
+        - !ImportValue WpPublicSubnet1a
+        - !ImportValue WpPublicSubnet1c
+      SecurityGroups:
+        - !Ref AlbSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Join ['-', [!Ref Env, !Ref ResourceName, 'alb']]
+  HttpListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref HttpTargetGroup
+  # ------------------------------ #
+  # TargetGroup
+  # ------------------------------ #
+  HttpTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Name: !Join ['-', [!Ref Env, !Ref ResourceName, 'tg']]
+      VpcId: !ImportValue WpVpc
+      Port: 80
+      Protocol: HTTP
+      TargetType: instance
+      Tags:
+        - Key: Name
+          Value: !Join ['-', [!Ref Env, !Ref ResourceName, 'tg']]
+  # ------------------------------ #
+  # EC2 SecurityGroup
+  # ------------------------------ #
+  EC2SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: !Join ['-', [!Ref 'Env', !Ref 'ResourceName', 'sg-for-ec2']]
+      GroupDescription: Security group for WebApServerEC2
+      VpcId: !ImportValue WpVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref AlbSecurityGroup
+          Description: Allow all http traffic
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref AlbSecurityGroup
+          Description: Allow all https traffic
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: Allow all ssh traffic
+      Tags:
+        - Key: Name
+          Value: !Join ['-', [!Ref Env, !Ref ResourceName, 'sg-for-ec2']]
+
+Outputs:
+  AlbSecurityGroup:
+    Value: !Ref AlbSecurityGroup
+    Export:
+      Name: !Sub 'WpAlbSecurityGroup'
+  ApplicationLoadBalancer:
+    Value: !Ref ApplicationLoadBalancer
+    Export:
+      Name: !Sub 'WpApplicationLoadBalancer'
+  EC2SecurityGroup:
+    Value: !Ref EC2SecurityGroup
+    Export:
+      Name: !Sub 'WpEC2SecurityGroup'
