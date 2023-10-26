@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  "wp-alb-tg-listener-albsg-ec2sg"
+
+Parameters:
+  Env:
+    Type: String
+    Default: "dev"
+    AllowedValues: ["dev", "stg", "prd"]
+  ResourceName:
+    Type: String
+    Default: "WpProject"
+
+Resources:
+  # ------------------------------ #
+  # ApplicationLoadBalancer
+  # ------------------------------ #
+  ApplicationLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Name: !Join ['-', [!Ref Env, !Ref ResourceName, 'alb']]
+      Subnets:
+        - !ImportValue WpPublicSubnet1a
+        - !ImportValue WpPublicSubnet1c
+      SecurityGroups:
+        - !ImportValue WpAlbSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Join ['-', [!Ref Env, !Ref ResourceName, 'alb']]
+  HttpListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref HttpTargetGroup
+  # ------------------------------ #
+  # TargetGroup
+  # ------------------------------ #
+  HttpTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Name: !Join ['-', [!Ref Env, !Ref ResourceName, 'tg']]
+      VpcId: !ImportValue WpVpc
+      Port: 80
+      Protocol: HTTP
+      TargetType: instance
+      Targets: 
+        - Id: !ImportValue WpEc2Instance
+          Port: 80
+      Tags:
+        - Key: Name
+          Value: !Join ['-', [!Ref Env, !Ref ResourceName, 'tg']]
+
+Outputs:
+  ApplicationLoadBalancer:
+    Value: !Ref ApplicationLoadBalancer
+    Export:
+      Name: !Sub 'WpApplicationLoadBalancer'

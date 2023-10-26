@@ -12,6 +12,8 @@ Parameters:
     Default: "WpProject"
   Keypair:
     Type: AWS::EC2::KeyPair::KeyName
+  AmiId:
+    Type: String
   SubnetId:
     Type: AWS::EC2::Subnet::Id
 
@@ -25,7 +27,7 @@ Resources:
       LaunchTemplateName: !Join ['-', [!Ref Env, !Ref ResourceName, 'launchtemplate']]
       LaunchTemplateData:
         KeyName: !Ref Keypair
-        ImageId: ami-06fdbb60c8e83aa5e
+        ImageId: !Ref AmiId
         InstanceType: t2.micro
         IamInstanceProfile:
           Arn: !GetAtt Ec2InstanceProfile.Arn

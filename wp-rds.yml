@@ -53,9 +53,9 @@ Parameters:
 
 Resources:
   # ------------------------------ #
-  # MySQLRDSInstance
+  # RDSInstance
   # ------------------------------ #
-  MySQLRDSInstance:
+  RDSInstance:
     Type: 'AWS::RDS::DBInstance'
     Properties:
       Engine: MySQL
@@ -67,26 +67,8 @@ Resources:
       AllocatedStorage: !Ref DBAllocatedStorage
       EngineVersion: !Ref DBEngineVersion
       VPCSecurityGroups: 
-        - !Ref DBSecurityGroup
+        - !ImportValue WpDbSecurityGroup
       DBSubnetGroupName: !Ref DBSubnetGroup
-  # ------------------------------ #
-  # DBSecurityGroup
-  # ------------------------------ #
-  DBSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties: 
-      GroupName: !Join ['-', [!Ref 'Env', !Ref 'ResourceName', 'sg-for-rds']]
-      VpcId: !ImportValue WpVpc
-      GroupDescription: Security group for RDSInstance
-      SecurityGroupIngress: 
-        - IpProtocol: tcp
-          FromPort: 3306
-          ToPort: 3306
-          SourceSecurityGroupId: !ImportValue WpEC2SecurityGroup
-          Description: Allow MySQL traffic from WpEC2SecurityGroup
-      Tags: 
-        - Key: Name
-          Value: !Join ['-', [!Ref 'Env', !Ref 'ResourceName', 'sg-for-rds']]
   # ------------------------------ #
   # DBSubnetGroup
   # ------------------------------ #
@@ -127,14 +109,10 @@ Resources:
     Properties:
       Name: '/wordpress/WP_DB_HOST'
       Type: String
-      Value: !GetAtt MySQLRDSInstance.Endpoint.Address
+      Value: !GetAtt RDSInstance.Endpoint.Address
 
 Outputs:
   RDSEndpoint:
-    Value: !GetAtt MySQLRDSInstance.Endpoint.Address
+    Value: !GetAtt RDSInstance.Endpoint.Address
     Export:
       Name: !Sub 'WpRDSEndpoint'
-  DBSecurityGroup:
-    Value: !Ref DBSecurityGroup
-    Export:
-      Name: !Sub 'WpDbSecurityGroup'
